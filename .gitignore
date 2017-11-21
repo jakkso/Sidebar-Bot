@@ -1,0 +1,5 @@
+.idea/
+scratch*
+.DS_Store
+reddit_credentials
+twitter_credentials
