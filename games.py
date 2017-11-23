@@ -94,6 +94,8 @@ def pregame(soup):
                 am_or_pm += j.get_text()
             if (am_or_pm[1:3]) == 'PM':
                 hour += 12
+            if hour == 24:
+                hour = 0
             d = i.select('div.schedules-list-content.pre.expandable.type-reg')
             d = str(d[0])
             point = d.index('data-gameid=')
@@ -141,7 +143,7 @@ def bye_teams(soup):
     """
     s = soup.select('span.bye-team')
     if len(s) == 0:
-        return False
+        return 'None'
     for i in s:
         text = (i.get_text(strip=True))
         return text
