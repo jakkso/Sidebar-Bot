@@ -122,8 +122,3 @@ def double_chart(div1, div2):
         c = a + b
         d.append(c)
     return d
-
-
-
-
-

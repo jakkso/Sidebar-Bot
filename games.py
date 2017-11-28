@@ -1,7 +1,5 @@
 from bs4 import BeautifulSoup
 from requests import get
-from datetime import datetime
-from pytz import timezone
 
 
 NICKNAME_DICT = {
@@ -37,103 +35,45 @@ NICKNAME_DICT = {
         'Buccaneers': 'TB',
         'Titans': 'TEN',
         'Redskins': 'WAS'}
+CBS = 'https://www.cbssports.com/nfl/scoreboard/'
+NFL = 'http://www.nfl.com/schedules'
 
 
 def main():
     """
-    Fetches NFL.com's schedule page, calls various scraping functions based upon whether a game is upcoming or already
-    played.
+    Fetches CBS sport & NFL schedule page, parses that info
     :return: a tuple of a string formatted for Reddit's sidebar and the teams on bye week
     """
-    text = 'Time | Away | | @ | | Home \n'
-    text += ':-: | :-: | :-: | :-: | :-: | :-: \n'
-    soup = fetch_webpage()
-    pre_game = pregame(soup)
-    post_game = postgame(soup)
-    bye = bye_teams(soup)
-    if pre_game is False and post_game is False and bye is False:
-        return False
-    elif pre_game is not False and post_game is False:
-        text += pre_game
-        return text, bye
-    elif pre_game is False and post_game is not False:
-        text += post_game
-        return text, bye
-    elif pre_game is not False and post_game is not False:
-        text += post_game
-        text += pre_game
-        return text, bye
+    text = game_scores(fetch_webpage(CBS))
+    bye = bye_teams(fetch_webpage(NFL))
+    return text, bye
 
 
-def fetch_webpage():
-    """To minimize contact with NFL.com, this fetches the website once and the other functions use its return"""
-    url = get('http://www.nfl.com/schedules')
+def fetch_webpage(site):
+    """
+    :param site: website to be parsed
+    :return: soup object of site param
+    """
+    url = get(site)
     soup = BeautifulSoup(url.content, 'html.parser')
     return soup
 
 
-def pregame(soup):
-    """Scrapes upcoming games.  The first result in the list is removed because the NFL schedule webpage shows it twice,
-    both as the next upcoming game and in a list of the upcoming games."""
-    s = soup.select('li.schedules-list-matchup.pre.expandable.type-reg.pro-legacy.no-weather')
-    if len(s) == 0:
-        return False
-    else:
-        text = ''
-        del s[0]
-        for i in s:
-            t = i.select('span.time')
-            suff = i.select('span.suff')
-            clock = ''
-            am_or_pm = ''
-            for j in t:
-                clock += j.get_text()
-            hour = int(clock[:clock.index(':')])
-            minute = int(clock[clock.index(':') + 1:])
-            for j in suff:
-                am_or_pm += j.get_text()
-            if (am_or_pm[1:3]) == 'PM':
-                hour += 12
-            if hour == 24:
-                hour = 0
-            d = i.select('div.schedules-list-content.pre.expandable.type-reg')
-            d = str(d[0])
-            point = d.index('data-gameid=')
-            s = d[point + 13:point + 21]
-            date = datetime(year=int(s[0:4]), month=int(s[4:6]), day=int(s[6:8]), hour=hour, minute=minute, second=00)
-            tz = timezone('US/Eastern')
-            utc = timezone('UTC')
-            d_tz = tz.normalize(tz.localize(date))
-            d_utc = d_tz.astimezone(utc)
-            kuwait = d_utc.astimezone(timezone('Asia/Kuwait'))
-            f = kuwait.strftime("%m/%d %H:%M AST")
-            a = NICKNAME_DICT[i.select('span.team-name.away')[0].get_text()]
-            h = NICKNAME_DICT[i.select('span.team-name.home')[0].get_text()]
-            text += (f + '  | ' + a + ' | 0 | @ | 0 | ' + h + '\n')
-        return text
-
-
-def postgame(soup):
+def game_scores(soup):
     """
-    :param soup: a soup object of the NFL's schedule page.
-    :return: string formatted for Reddit's sidebar
+    :param soup: A soup object of the CBS sports NFL page
+    :return: parsed text formatted for reddit's table markdown.
     """
-    s = soup.select('div.schedules-list-hd.post')
-    if len(s) == 0:
-        return False
-    else:
-        text = ''
-        for i in s:
-            away = i.select('span.team-name.away')[0].get_text()
-            if away in NICKNAME_DICT:
-                away = NICKNAME_DICT[away]
-            away_score = i.select('span.team-score.away')[0].get_text()
-            home = i.select('span.team-name.home')[0].get_text()
-            if home in NICKNAME_DICT:
-                home = NICKNAME_DICT[home]
-            home_score = i.select('span.team-score.home')[0].get_text()
-            text += ' Final | ' + away + ' | ' + away_score + ' | @ | ' + home_score + ' | ' + home + '\n'
-        return text
+    t = soup.select('div.live-update')
+    text = 'Time | Away | | @ | | Home \n :-: | :-: | :-: | :-: | :-: | :-: \n'
+    for i in t:
+        status = i.select('div.game-status')[0].get_text().strip()
+        a = i.select('a.team')
+        score = i.select('td.total-score')
+        v = [a[0].get_text(), score[0].get_text()]
+        h = [a[1].get_text(), score[1].get_text()]
+        text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1], NICKNAME_DICT[h[0]])
+    return text
 
 
 def bye_teams(soup):

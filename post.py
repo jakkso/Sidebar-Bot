@@ -111,12 +111,12 @@ def schedule_url():
     """
     try:
         api = connect('twitter')
-        stats = api.GetUserTimeline(afnTV)
+        posts = api.GetUserTimeline(afnTV)
         urls = []
-        for s in stats:
-            if 'NFL' and 'Week' in s.text:
-                ind = s.text.index('https://')
-                urls.append(s.text[ind:])
+        for post in posts:
+            if '#NFL' in post.text:
+                ind = post.text.index('https://')
+                urls.append(post.text[ind:])
         if len(urls) == 0:
             return 'https://twitter.com/AFNtelevision'
         else:
