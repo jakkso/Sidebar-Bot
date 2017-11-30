@@ -34,7 +34,40 @@ NICKNAME_DICT = {
         'Rams': 'LAR',
         'Buccaneers': 'TB',
         'Titans': 'TEN',
-        'Redskins': 'WAS'}
+        'Redskins': 'WAS',
+        'Arizona': 'ARI',
+        'Atlanta': 'ATL',
+        'Baltimore': 'BAL',
+        'Buffalo': 'BUF',
+        'Carolina': 'CAR',
+        'Chicago': 'CHI',
+        'Cincinnati': 'CIN',
+        'Cleveland': 'CLE',
+        'Dallas': 'DAL',
+        'Denver': 'DEN',
+        'Detroit': 'DET',
+        'Green Bay': 'GB',
+        'Houston': 'HOU',
+        'Indianapolis': 'IND',
+        'Jacksonville': 'JAX',
+        'Kansas City': 'KC',
+        'Miami': 'MIA',
+        'Minnesota': 'MIN',
+        'New England': 'NE',
+        'New Orleans': 'NO',
+        'N.Y. Giants': 'NYG',
+        'N.Y. Jets': 'NYJ',
+        'Oakland': 'OAK',
+        'Philadelphia': 'PHI',
+        'Pittsburgh': 'PIT',
+        'L.A. Chargers': 'LAC',
+        'Seattle': 'SEA',
+        'San Francisco': 'SF',
+        'L.A. Rams': 'LAR',
+        'Tampa Bay': 'TB',
+        'Tennessee': 'TEN',
+        'Washington': 'WAS'}
+
 CBS = 'https://www.cbssports.com/nfl/scoreboard/'
 NFL = 'http://www.nfl.com/schedules'
 
@@ -64,15 +97,22 @@ def game_scores(soup):
     :param soup: A soup object of the CBS sports NFL page
     :return: parsed text formatted for reddit's table markdown.
     """
-    t = soup.select('div.live-update')
     text = 'Time | Away | | @ | | Home \n :-: | :-: | :-: | :-: | :-: | :-: \n'
+    t = soup.select('div.live-update')
     for i in t:
         status = i.select('div.game-status')[0].get_text().strip()
         a = i.select('a.team')
         score = i.select('td.total-score')
-        v = [a[0].get_text(), score[0].get_text()]
-        h = [a[1].get_text(), score[1].get_text()]
-        text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1], NICKNAME_DICT[h[0]])
+        if len(score) == 0:
+            score = [0, 0]
+            v = [a[0].get_text(), score[0]]
+            h = [a[1].get_text(), score[1]]
+            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1],
+                                                            NICKNAME_DICT[h[0]])
+        else:
+            v = [a[0].get_text(), score[0].get_text()]
+            h = [a[1].get_text(), score[1].get_text()]
+            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1], NICKNAME_DICT[h[0]])
     return text
 
 

@@ -1,50 +1,23 @@
 from requests import get
 from bs4 import BeautifulSoup
-
-afc = 'AFC'
-nfc = 'NFC'
-e = 'East'
-w = 'West'
-n = 'North'
-s = 'South'
+from games import NICKNAME_DICT as D
 
 
 def main():
-    """Flattens a nested list of teams into a single string of text ready to be posted on a reddit sidebar.
-    Instead of simplifying the function, I left the option open to be able to easily extend the function to compare
-    different conferences / divisions, instead of the league as a whole."""
-    league = fetch()
-    afc_east = chart(afc, division_separator(league[1:5]), e)
-    afc_north = chart(afc, division_separator(league[6:10]), n)
-    afc_south = chart(afc, division_separator(league[11:15]), s)
-    afc_west = chart(afc, division_separator(league[16:20]), w)
-    nfc_east = chart(nfc, division_separator(league[21:25]), e)
-    nfc_north = chart(nfc, division_separator(league[26:30]), n)
-    nfc_south = chart(nfc, division_separator(league[31:35]), s)
-    nfc_west = chart(nfc, division_separator(league[36:40]), w)
-    afc_n_s = double_chart(afc_north, afc_south)
-    afc_e_w = double_chart(afc_east, afc_west)
-    nfc_n_s = double_chart(nfc_north, nfc_south)
-    nfc_e_w = double_chart(nfc_east, nfc_west)
-    american = [afc_n_s, afc_e_w]
-    national = [nfc_n_s, nfc_e_w]
-    total = [american, national]
-    c = ''
-    for i in total:
-        b = ''
-        for j in i:
-            a = ''
-            for k in j:
-                a += k
-                a += '\n'
-            b += a
-            b += '\n'
-        c += b
-    return c
+    div = fetch()
+    init = '{} | {} | {} | {} \n :-: | :-: | :-: | :-:\n'
+    sidebar = ''
+    for item in div:
+        conf1, card1, div1, conf2, card2, div2 = item[0][0], item[0][1], item[0][2], item[1][0], item[1][1], item[1][2]
+        header = init.format(conf1, card1, conf2, card2)
+        for subitem in zip(div1, div2):
+            header += '{} | {} | {} | {} \n'.format(subitem[0][0], subitem[0][1], subitem[1][0], subitem[1][1])
+        sidebar += header + '\n'
+    return sidebar
 
 
 def fetch():
-    """Scrapes a web-page for current NFL standings, returns a parsed list"""
+    """Returns nested list of team divisions"""
     page = get('https://www.cbssports.com/nfl/standings')
     soup = BeautifulSoup(page.content, 'html.parser')
     section = soup.find_all('table', 'data stacked')
@@ -52,73 +25,29 @@ def fetch():
     for i in section:
         for j in i:
             league.append(j)
-    return league
+    teams = team_separator(league)
+    return [[['AFC', 'North', teams[4:8]], ['AFC', 'South', teams[8:12]]], [['AFC', 'East', teams[:4]],
+            ['AFC', 'West', teams[12:16]]], [['NFC', 'North', teams[20:24]], ['NFC', 'South', teams[24:28]]],
+            [['NFC', 'East', teams[16:20]], ['NFC', 'West', teams[28:]]]]
 
 
-def division_separator(teams):
-    """Processes, organizes the raw HTML text, returns clean, organized text.  Called once for each division"""
+def team_separator(html):
+    """Parses HTML into text, returns list of team standings"""
+    remove = [35, 30, 25, 20, 15, 10, 5, 0]
     division = []
-    d = {
-        'Arizona': 'ARI',
-        'Atlanta': 'ATL',
-        'Baltimore': 'BAL',
-        'Buffalo': 'BUF',
-        'Carolina': 'CAR',
-        'Chicago': 'CHI',
-        'Cincinnati': 'CIN',
-        'Cleveland': 'CLE',
-        'Dallas': 'DAL',
-        'Denver': 'DEN',
-        'Detroit': 'DET',
-        'Green Bay': 'GB',
-        'Houston': 'HOU',
-        'Indianapolis': 'IND',
-        'Jacksonville': 'JAX',
-        'Kansas City': 'KC',
-        'Miami': 'MIA',
-        'Minnesota': 'MIN',
-        'New England': 'NE',
-        'New Orleans': 'NO',
-        'N.Y. Giants': 'NYG',
-        'N.Y. Jets': 'NYJ',
-        'Oakland': 'OAK',
-        'Philadelphia': 'PHI',
-        'Pittsburgh': 'PIT',
-        'L.A. Chargers': 'LAC',
-        'Seattle': 'SEA',
-        'San Francisco': 'SF',
-        'L.A. Rams': 'LAR',
-        'Tampa Bay': 'TB',
-        'Tennessee': 'TEN',
-        'Washington': 'WAS'}
-    for i in teams:
-        t = []
-        for j in i:
-            j = (j.get_text())
-            if j in d:
-                j = d[j]
-            t.append(j)
-        division.append(t)
-    return division
+    for table_row in html:
+        stats = []
+        for text in table_row:
+            text = (text.get_text())
+            if text in D:  # This changes the city / team name into truncated city name
+                print(text)
+                text = D[text]
+            stats.append(text)
+        division.append(stats)
+    for num in remove:
+        del division[num]  # These are rows that are just column headers
+    return [[i[0], str(i[1]) + '-' + str(i[2])] for i in division]  # returns a list of just wins/losses
 
 
-def chart(conference, division1, name1):
-    """Further organizes the text into columns separated by characters that initialize reddit's table formatting"""
-    template = []
-    template.append(conference + ' | ' + str(name1))
-    template.append(':-: | :-:')
-    for i in division1:
-        template.append('*' + str(i[0]) + '* | ' + str(i[1]) + '-' + str(i[2]))
-    return template
-
-
-def double_chart(div1, div2):
-    """Combines two charts into a single chart, in order to better use the sidebar landscape."""
-    conf = zip(div1, div2)
-    d = []
-    for i in conf:
-        a = i[0]
-        b = ' | ' + i[1]
-        c = a + b
-        d.append(c)
-    return d
+if __name__ == '__main__':
+    main()
