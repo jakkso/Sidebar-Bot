@@ -107,7 +107,7 @@ def schedule_url():
         posts = api.GetUserTimeline(31264880)
         urls = []
         for post in posts:
-            if '#NFL' in post.text:
+            if 'NFL' in post.text:
                 ind = post.text.index('https://')
                 urls.append(post.text[ind:])
         if len(urls) == 0:
