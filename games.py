@@ -1,9 +1,7 @@
 from bs4 import BeautifulSoup
 from requests import get
 
-
-NICKNAME_DICT = {
-        'Cardinals': 'ARI',
+DICT = {'Cardinals': 'ARI',
         'Falcons': 'ATL',
         'Ravens': 'BAL',
         'Bills': 'BUF',
@@ -66,8 +64,39 @@ NICKNAME_DICT = {
         'L.A. Rams': 'LAR',
         'Tampa Bay': 'TB',
         'Tennessee': 'TEN',
-        'Washington': 'WAS'}
-
+        'Washington': 'WAS',
+        'NE': 'AFC East',
+        'BUF': 'AFC East',
+        'NYJ': 'AFC East',
+        'MIA': 'AFC East',
+        'KC': 'AFC West',
+        'LAC': 'AFC West',
+        'OAK': 'AFC West',
+        'DEN': 'AFC West',
+        'PIT': 'AFC North',
+        'BAL': 'AFC North',
+        'CIN': 'AFC North',
+        'CLE': 'AFC North',
+        'TEN': 'AFC South',
+        'JAX': 'AFC South',
+        'HOU': 'AFC South',
+        'IND': 'AFC South',
+        'MIN': 'NFC North',
+        'DET': 'NFC North',
+        'GB': 'NFC North',
+        'CHI': 'NFC North',
+        'NO': 'NFC South',
+        'CAR': 'NFC South',
+        'ATL': 'NFC South',
+        'TB': 'NFC South',
+        'PHI': 'NFC East',
+        'DAL': 'NFC East',
+        'WAS': 'NFC East',
+        'NYG': 'NFC East',
+        'LAR': 'NFC West',
+        'SEA': 'NFC West',
+        'ARI': 'NFC West',
+        'SF': 'NFC West'}
 CBS = 'https://www.cbssports.com/nfl/scoreboard/'
 NFL = 'http://www.nfl.com/schedules'
 
@@ -75,17 +104,17 @@ NFL = 'http://www.nfl.com/schedules'
 def main():
     """
     Fetches CBS sport & NFL schedule page, parses that info
-    :return: a tuple of a string formatted for Reddit's sidebar and the teams on bye week
+    :return: a tuple of a string formatted for Reddit's sidebar and the teams on bye
     """
-    text = game_scores(fetch_webpage(CBS))
+    scores = game_scores(fetch_webpage(CBS))
     bye = bye_teams(fetch_webpage(NFL))
-    return text, bye
+    return scores, bye
 
 
 def fetch_webpage(site):
     """
     :param site: website to be parsed
-    :return: soup object of site param
+    :return: soup object of site
     """
     url = get(site)
     soup = BeautifulSoup(url.content, 'html.parser')
@@ -98,21 +127,21 @@ def game_scores(soup):
     :return: parsed text formatted for reddit's table markdown.
     """
     text = 'Time | Away | | @ | | Home \n :-: | :-: | :-: | :-: | :-: | :-: \n'
-    t = soup.select('div.live-update')
-    for i in t:
-        status = i.select('div.game-status')[0].get_text().strip()
-        a = i.select('a.team')
-        score = i.select('td.total-score')
+    games = soup.select('div.live-update')
+    for game in games:
+        status = game.select('div.game-status')[0].get_text().strip()
+        team = game.select('a.team')
+        score = game.select('td.total-score')
         if len(score) == 0:
             score = [0, 0]
-            v = [a[0].get_text(), score[0]]
-            h = [a[1].get_text(), score[1]]
-            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1],
-                                                            NICKNAME_DICT[h[0]])
+            v = [team[0].get_text(), score[0]]
+            h = [team[1].get_text(), score[1]]
+            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, DICT[v[0]], v[1], h[1],
+                                                            DICT[h[0]])
         else:
-            v = [a[0].get_text(), score[0].get_text()]
-            h = [a[1].get_text(), score[1].get_text()]
-            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, NICKNAME_DICT[v[0]], v[1], h[1], NICKNAME_DICT[h[0]])
+            v = [team[0].get_text(), score[0].get_text()]
+            h = [team[1].get_text(), score[1].get_text()]
+            text += ' {} | {} | {} | @ | {} | {} \n'.format(status, DICT[v[0]], v[1], h[1], DICT[h[0]])
     return text
 
 
@@ -121,9 +150,9 @@ def bye_teams(soup):
     :param soup: a soup object of the NFL's schedule page.
     :return: string of the bye-week teams
     """
-    s = soup.select('span.bye-team')
-    if len(s) == 0:
+    bye = soup.select('span.bye-team')
+    if len(bye) == 0:
         return 'None'
-    for i in s:
-        text = (i.get_text(strip=True))
+    for team in bye:
+        text = (team.get_text(strip=True))
         return text

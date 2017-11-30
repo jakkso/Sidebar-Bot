@@ -1,12 +1,10 @@
 from os import path
 from argparse import ArgumentParser
 import praw
-import standings
-import games
+from standings import main as standings
+from games import main as games
 import twitter
 
-
-afnTV = 31264880
 nfl = 'nflkuwait'
 test = 'robottestingzone'
 dir_path = path.dirname(path.abspath('post.py'))
@@ -14,53 +12,49 @@ dir_path = path.dirname(path.abspath('post.py'))
 
 def main():
     """
-    Connects to reddit, creates and then posts the sidebar message.
+    Determines where to post sidebar.
     """
     parser = ArgumentParser()
     parser.add_argument('-r', '--robotesting', help='Runs the bot on /r/robottestingzone', action='store_true')
     args = parser.parse_args()
-    skld = schedule_url()
 
     if args.robotesting:
-        poster(skld, test)
+        poster(test)
 
     else:
-        poster(skld, nfl)
+        poster(nfl)
 
 
-def poster(schedule, subreddit):
+def poster(subreddit):
     """
-    :param schedule: Link to AFN's twitter feed for that week's NFL air schedule
-    :param subreddit:  either a testing subreddit or the nflkuwait subreddit
+    Creates sidebar message and posts it to specified subreddit
+    :param subreddit:  the subreddit where the sidebar will be updated.
     """
     r = connect('reddit')
-    results = games.main()
-    stand = standings.main()
-    upcoming = results[0]
-    bye = results[1]
-    if upcoming is not False:
-        new_sidebar = 'Welcome to NFL KUWAIT! We are your source for NFL news, events and competitions \
-                in the Middle East.\n\n'
-        new_sidebar += '[Twitter](http://twitter.com/NFLKuwait) [Instagram](https://www.instagram.com/nflkuwait/?hl=en\
-                ) [Facebook](https://www.facebook.com/NFLKuwait/) [Snapchat](https://www.snapchat.com/add/nflkuwait/)\n\n'
-        new_sidebar += '*****\n\n'
-        new_sidebar += 'Here\'s the week\'s [AFN game air schedule](' + schedule + ')\n\n'
-        new_sidebar += '*****\n\n'
-        new_sidebar += '## This week\'s games\n\n'
-        new_sidebar += upcoming
-        new_sidebar += '\n\nBye teams: ' + bye + '\n\n'
-        new_sidebar += '\n\n*****\n\n'
-        new_sidebar += '## Current standings\n\n'
-        new_sidebar += '\n\n'
-        new_sidebar += stand
-        r.subreddit(subreddit).mod.update(description=new_sidebar)
+    res = games()
+    game_list, bye = res[0], res[1]
+    standings_chart = standings()
+    schedule = schedule_url()
+    new_sidebar = 'Welcome to NFL KUWAIT! We are your source for NFL news, events and competitions \
+            in the Middle East.\n\n'
+    new_sidebar += '[Twitter](http://twitter.com/NFLKuwait) [Instagram](https://www.instagram.com/nflkuwait/?hl=en\
+            ) [Facebook](https://www.facebook.com/NFLKuwait/) [Snapchat](https://www.snapchat.com/add/nflkuwait/)\n\n'
+    new_sidebar += '*****\n\n'
+    new_sidebar += 'Here\'s the week\'s [AFN game air schedule](' + schedule + ')\n\n'
+    new_sidebar += '*****\n\n'
+    new_sidebar += '## This week\'s games\n\n'
+    new_sidebar += game_list
+    new_sidebar += '\n\nBye teams: ' + bye + '\n\n'
+    new_sidebar += '\n\n*****\n\n'
+    new_sidebar += '## Current standings\n\n'
+    new_sidebar += '\n\n'
+    new_sidebar += standings_chart
+    r.subreddit(subreddit).mod.update(description=new_sidebar)
 
 
 def connect(site):
     """
-    Depending on site param, it opens and reads from a text file and uses the credentials to establish
-    a connection to the site via Oauth.
-    :param site: website to establish connection to, can be either 'reddit' or 'twitter'
+    :param site: website to establish connection to, can be either reddit or twitter
     :return: Connection to specified site
     """
     if site == 'reddit':
@@ -106,12 +100,11 @@ def connect(site):
 
 def schedule_url():
     """
-    Scrapes AFNTelevision twitter feed
     :return: A link to the AFN's NFL schedule for the week.  If not found, a link to the AFNtelevision twitter feed.
     """
     try:
         api = connect('twitter')
-        posts = api.GetUserTimeline(afnTV)
+        posts = api.GetUserTimeline(31264880)
         urls = []
         for post in posts:
             if '#NFL' in post.text:
