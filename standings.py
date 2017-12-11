@@ -47,11 +47,14 @@ def team_separator(html):
     :return: nested list of team names & standings
     """
     remove = [35, 30, 25, 20, 15, 10, 5, 0]
+    prefixes = ['x-', 'y-', 'z-', '*-']
     teams = []
     for table_row in html:
         stats = []
         for text in table_row:
             text = (text.get_text())
+            if text[:2] in prefixes:
+                text = text[2:]
             if text in D:  # This changes the city / team name into truncated city name
                 text = D[text]
             stats.append(text)
